@@ -1,0 +1,4 @@
+- [Object storage setup](object-storage.md) — GCS-backed presigned URL upload; objectPath returned as relative path, served at /api/storage/objects/{objectPath}
+- [Order schema field names](order-schema.md) — DB/API uses `city`/`region` (not deliveryCity/deliveryRegion); PaymentStatus enum is "pending"|"paid"|"failed" (not "success")
+- [Cart hook API](cart-hook.md) — CartContextType exposes `addToCart` (not `addItem`); CartItem requires {productId, productName, imageUrl, quantity, unitPrice}
+- [useVerifyPayment is a query](verify-payment-hook.md) — useVerifyPayment(reference, opts) is a GET query, not a mutation; use as query with enabled: !!reference

@@ -1,0 +1,743 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Ghana Shop e-commerce API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: products
+    description: Product catalog
+  - name: orders
+    description: Order management
+  - name: payments
+    description: Paystack payment processing
+  - name: auth
+    description: Admin authentication
+  - name: admin
+    description: Admin operations
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+
+paths:
+  /contact:
+    post:
+      operationId: sendContact
+      tags: [contact]
+      summary: Send a contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "200":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Products (public) ───────────────────────────────────────────────────────
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a single product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ─── Products (admin) ────────────────────────────────────────────────────────
+  /admin/products:
+    get:
+      operationId: adminListProducts
+      tags: [admin]
+      summary: Admin list all products
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: adminCreateProduct
+      tags: [admin]
+      summary: Create a product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /admin/products/{id}:
+    put:
+      operationId: adminUpdateProduct
+      tags: [admin]
+      summary: Update a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: adminDeleteProduct
+      tags: [admin]
+      summary: Delete a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ─── Orders ──────────────────────────────────────────────────────────────────
+  /orders:
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Place a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{reference}:
+    get:
+      operationId: getOrderByReference
+      tags: [orders]
+      summary: Get order by payment reference
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders:
+    get:
+      operationId: adminListOrders
+      tags: [admin]
+      summary: Admin list all orders
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+  /admin/orders/{id}:
+    patch:
+      operationId: adminUpdateOrder
+      tags: [admin]
+      summary: Update order status / delivery
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderStatusUpdate"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # ─── Payments ────────────────────────────────────────────────────────────────
+  /payments/initialize:
+    post:
+      operationId: initializePayment
+      tags: [payments]
+      summary: Initialize a Paystack transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInit"
+      responses:
+        "200":
+          description: Paystack authorization URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInitResponse"
+
+  /payments/verify/{reference}:
+    get:
+      operationId: verifyPayment
+      tags: [payments]
+      summary: Verify a Paystack transaction
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentVerifyResponse"
+
+  # ─── Admin Auth ───────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/dashboard:
+    get:
+      operationId: adminGetDashboard
+      tags: [admin]
+      summary: Dashboard summary stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content streamed.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content streamed.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    ContactInput:
+      type: object
+      required: [name, email, message]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        message:
+          type: string
+
+    Product:
+      type: object
+      required: [id, name, price, imageUrl, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        imageUrl:
+          type: string
+        category:
+          type: ["string", "null"]
+        options:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [available, coming_soon, preorder]
+        stock:
+          type: integer
+        featured:
+          type: string
+        createdAt:
+          type: string
+
+    ProductInput:
+      type: object
+      required: [name, price, imageUrl, status]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+        category:
+          type: string
+        options:
+          type: string
+        status:
+          type: string
+          enum: [available, coming_soon, preorder]
+        stock:
+          type: integer
+        featured:
+          type: string
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+        category:
+          type: string
+        options:
+          type: string
+        status:
+          type: string
+          enum: [available, coming_soon, preorder]
+        stock:
+          type: integer
+        featured:
+          type: string
+
+    OrderItem:
+      type: object
+      required: [productId, productName, quantity, unitPrice]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+
+    Order:
+      type: object
+      required: [id, reference, customerName, customerEmail, customerPhone, deliveryAddress, items, totalAmount, paymentStatus, orderStatus, createdAt]
+      properties:
+        id:
+          type: integer
+        reference:
+          type: string
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        deliveryAddress:
+          type: string
+        city:
+          type: ["string", "null"]
+        region:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        totalAmount:
+          type: number
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed]
+        orderStatus:
+          type: string
+          enum: [pending, processing, shipped, delivered, cancelled]
+        deliveryNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    OrderInput:
+      type: object
+      required: [customerName, customerEmail, customerPhone, deliveryAddress, items]
+      properties:
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        deliveryAddress:
+          type: string
+        city:
+          type: string
+        region:
+          type: string
+        deliveryNotes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    OrderStatusUpdate:
+      type: object
+      properties:
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed]
+        orderStatus:
+          type: string
+          enum: [pending, processing, shipped, delivered, cancelled]
+        deliveryNotes:
+          type: string
+
+    PaymentInit:
+      type: object
+      required: [email, amount, orderId]
+      properties:
+        email:
+          type: string
+        amount:
+          type: number
+        orderId:
+          type: integer
+        reference:
+          type: string
+
+    PaymentInitResponse:
+      type: object
+      required: [authorizationUrl, reference]
+      properties:
+        authorizationUrl:
+          type: string
+        reference:
+          type: string
+        accessCode:
+          type: string
+
+    PaymentVerifyResponse:
+      type: object
+      required: [status, reference, amount]
+      properties:
+        status:
+          type: string
+        reference:
+          type: string
+        amount:
+          type: number
+        customerEmail:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      required: [token, username]
+      properties:
+        token:
+          type: string
+        username:
+          type: string
+
+    DashboardStats:
+      type: object
+      required: [totalOrders, totalRevenue, pendingOrders, totalProducts]
+      properties:
+        totalOrders:
+          type: integer
+        totalRevenue:
+          type: number
+        pendingOrders:
+          type: integer
+        shippedOrders:
+          type: integer
+        deliveredOrders:
+          type: integer
+        totalProducts:
+          type: integer
+        recentOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'

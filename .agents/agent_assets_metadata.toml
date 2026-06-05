@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "ScAICvTGG7pm0sXn5kYee"
+uri = "file://artifacts/ghana-shop/public/logo.png"
+type = "image"
+title = "napong ahenema king logo"

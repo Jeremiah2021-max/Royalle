@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Ghanaian Footwear & Traditional Wear"
+version = "1.0.0"
+id = "artifacts/ghana-shop"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23093
+
+[services.development]
+run = "pnpm --filter @workspace/ghana-shop run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ghana-shop", "run", "build" ]
+publicDir = "artifacts/ghana-shop/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23093"
+BASE_PATH = "/"
